@@ -13,6 +13,8 @@
              2. 在要实现的抽象类中提供一个包含实现的句柄
 """
 import collections
+from abc import ABCMeta
+import Image
 
 
 def has_method(*methods):
@@ -22,6 +24,9 @@ def has_method(*methods):
 	"""
 	def decorator(Base):
 		def __subclasshook__(Class, Subclass):
+			"""
+			当调用isinstance方法的时候会调用第二个参数的__subclasshook__方法
+			"""
 			if Class is Base:
 				attritubes = collections.ChainMap(*(Supserclass.__dict__ for Supserclass in Subclass.__mro__))
 
@@ -31,3 +36,68 @@ def has_method(*methods):
 		Base.__subclasshook__ = classmethod(__subclasshook__)
 		return Base
 	return decorator
+
+class BarCharter:
+	def __init__(self, renderer):
+		if not isinstance(renderer, BarRender):
+			raise TypeError("excepted object of BarRender {}".format(type(renderer).__name__))
+		self._renderer = renderer
+	def render(self, caption, pairs):
+		maximun = max(value for _, value in pairs)
+		self._renderer.initialize(len(pairs), maximun)
+		self._renderer.draw_caption(caption)
+		for name,value in pairs:
+			self._renderer.draw_bar(name,value)
+		self._renderer.finalize()
+
+@has_method('initialize', 'draw_caption', 'draw_bar','finalize')
+class BarRender(metaclass=ABCMeta):pass
+
+class TextBarRender():
+	def __init__(self, scaleFactor=40):
+		self.scaleFactor = scaleFactor
+
+	def initialize(self, bars, maxinum):
+		assert bars > 0 and maxinum > 0
+		self.scale = self.scaleFactor / maxinum
+
+	def draw_caption(self, caption):
+		print('{0:^{2}}\n{1:^{2}}'.format(caption, '='*len(caption), self.scaleFactor))
+
+	def draw_bar(self, name, value):
+		print('{}{}'.format('*'*int(value*self.scale),name))
+
+	def finalize(self):
+		pass
+
+class ImageBarRender():
+	"""
+	调用Image库来来绘制
+	"""
+	def __init__(self, stepHeight=10, barWidth=30, barGap=2):
+		self.stepHeight = stepHeight
+		self.barWidth   = barWidth
+		self.barGap     = barGap
+
+	def initialize(self, bars, maxinum):
+		assert bars > 0 and maxinum > 0
+
+		self.index = 0
+
+	def draw_caption(self, caption):
+		pass
+
+	def draw_bar(self, name ,value):
+		pass
+
+	def finalize(self):
+		pass
+
+
+def main():
+	pairs = {('Mon',16),('Tue', 19),('Wed',12),('Thu',3)}
+	textBarChart = BarCharter(TextBarRender())
+	textBarChart.render('Forecast 4/5', pairs)
+
+if __name__ == '__main__':
+    main()
